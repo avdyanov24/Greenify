@@ -1,0 +1,519 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================================
+// USER & PROFILE
+// ============================================================================
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  passwordHash  String
+  username      String    @unique
+  displayName   String?
+  bio           String?
+  profileImage  String?   // Cloudflare R2 URL
+
+  // Role: user, moderator, admin
+  role          String    @default("user")
+  isBanned      Boolean   @default(false)
+
+  // Progression system
+  level         Int       @default(1)
+  xp            Int       @default(0)
+  greenPoints   Int       @default(0)
+
+  // Membership
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Location for job availability
+  latitude      Float?
+  longitude     Float?
+
+  // Work availability
+  availableForHire Boolean @default(false)
+  bioForHire    String?   // Short pitch shown on the marketplace
+  averageRating Float?    // Computed from reviews
+
+  // Relations
+  posts         Post[]
+  comments      Comment[]
+  endorsements  Endorsement[]
+  endorsementsReceived Endorsement[] @relation("EndorsedBy")
+  hexes         Hex[]
+  organizationsMemberships OrganizationMember[]
+  organizationsCreated Organization[] @relation("CreatedBy")
+  postedTasks   MarketplaceTask[] @relation("TaskPoster")
+  assignedTasks MarketplaceTask[] @relation("AssignedWorker")
+  taskApplications TaskApplication[]
+  reviewsLeft   Review[] @relation("ReviewBy")
+  reviewsReceived Review[] @relation("ReviewFor")
+  vouchers      UserVoucher[]
+  subscription  Subscription?
+  boosts        Boost[]
+  achievements  UserAchievement[]
+  following     Follow[]  @relation("Follower")
+  followers     Follow[]  @relation("Following")
+
+  @@index([email])
+  @@index([username])
+}
+
+// ============================================================================
+// FOLLOWS / FRIENDS
+// ============================================================================
+
+model Follow {
+  id           String   @id @default(cuid())
+
+  followerId   String
+  follower     User     @relation("Follower", fields: [followerId], references: [id], onDelete: Cascade)
+
+  followingId  String
+  following    User     @relation("Following", fields: [followingId], references: [id], onDelete: Cascade)
+
+  createdAt    DateTime @default(now())
+
+  @@index([followerId])
+  @@index([followingId])
+  @@unique([followerId, followingId])
+}
+
+// ============================================================================
+// PLANTING POSTS & IMAGES
+// ============================================================================
+
+model Post {
+  id            String    @id @default(cuid())
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  title         String
+  description   String?
+  
+  // GPS location where planted
+  latitude      Float
+  longitude     Float
+  
+  // Plant type: tree, flower, grass
+  plantType     String
+  
+  // Post status: pending, approved, rejected, flagged
+  status        String    @default("pending")
+  
+  // AI duplicate detection
+  aiConfidence  Float?    // Confidence score (0-1) if flagged
+  aiDuplicate   String?   // ID of suspected duplicate post
+  
+  // Hex claim
+  hexId         String?
+  hex           Hex?      @relation(fields: [hexId], references: [id], onDelete: SetNull)
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  // Relations
+  images        PostImage[]
+  comments      Comment[]
+  endorsements  Endorsement[]
+  flags         ModeratorFlag[]
+  boosts        Boost[] @relation("BoostedPost")
+  
+  @@index([userId])
+  @@index([status])
+  @@index([hexId])
+}
+
+model PostImage {
+  id            String    @id @default(cuid())
+  postId        String
+  post          Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  
+  // Image stored in Cloudflare R2
+  imageUrl      String
+  
+  // Order: 1 (seed), 2 (placing), 3 (buried)
+  order         Int
+  
+  // AI analysis
+  pHash         String?   // Perceptual hash for duplicate detection
+  
+  createdAt     DateTime  @default(now())
+  
+  @@index([postId])
+  @@unique([postId, order])
+}
+
+// ============================================================================
+// ENDORSEMENTS & HEX SYSTEM
+// ============================================================================
+
+model Endorsement {
+  id            String    @id @default(cuid())
+  postId        String
+  post          Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  
+  endorserId    String
+  endorser      User      @relation(fields: [endorserId], references: [id], onDelete: Cascade)
+  
+  endorsedUserId String
+  endorsedUser  User      @relation("EndorsedBy", fields: [endorsedUserId], references: [id], onDelete: Cascade)
+  
+  hexesGranted  Int       @default(1)
+  
+  createdAt     DateTime  @default(now())
+  
+  @@index([postId])
+  @@index([endorserId])
+  @@index([endorsedUserId])
+  @@unique([postId, endorserId])
+}
+
+model Hex {
+  id            String    @id @default(cuid())
+  
+  // H3 index (string representation of hex ID at resolution 9)
+  h3Index       String    @unique
+  
+  // Ownership
+  userId        String?
+  user          User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  
+  organizationId String?
+  organization  Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+  
+  // Density info
+  plantCount    Int       @default(0)
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  // Relations
+  posts         Post[]
+  
+  @@index([userId])
+  @@index([organizationId])
+}
+
+// ============================================================================
+// ORGANIZATIONS
+// ============================================================================
+
+model Organization {
+  id            String    @id @default(cuid())
+  
+  name          String
+  description   String?
+  logo          String?   // Cloudflare R2 URL
+  
+  leaderId      String
+  leader        User      @relation("CreatedBy", fields: [leaderId], references: [id], onDelete: Cascade)
+  
+  // GP distribution mode: "equal", "leader-cut", "contribution-weighted"
+  distributionMode String @default("equal")
+  leaderCutPercent Int?   // 10-30, used only if distributionMode = "leader-cut"
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  // Relations
+  members       OrganizationMember[]
+  hexes         Hex[]
+  
+  @@index([leaderId])
+}
+
+model OrganizationMember {
+  id            String    @id @default(cuid())
+  
+  organizationId String
+  organization  Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Role: member, moderator
+  role          String    @default("member")
+  
+  // Contribution score for weighted GP distribution (snapshot of last period)
+  contributionScore Int   @default(0)
+  
+  joinedAt      DateTime  @default(now())
+  
+  @@index([organizationId])
+  @@index([userId])
+  @@unique([organizationId, userId])
+}
+
+// ============================================================================
+// MARKETPLACE
+// ============================================================================
+
+model MarketplaceTask {
+  id            String    @id @default(cuid())
+  
+  posterId      String
+  poster        User      @relation("TaskPoster", fields: [posterId], references: [id], onDelete: Cascade)
+  
+  title         String
+  description   String
+  
+  // Budget in green points
+  budgetGP      Int
+  
+  // Status: open, in-progress, completed, cancelled
+  status        String    @default("open")
+  
+  // Assigned worker (when accepted)
+  assignedWorkerId String?
+  assignedWorker   User?   @relation("AssignedWorker", fields: [assignedWorkerId], references: [id], onDelete: SetNull)
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  // Relations
+  applications  TaskApplication[]
+  boosts        Boost[] @relation("BoostedTask")
+  
+  @@index([posterId])
+  @@index([assignedWorkerId])
+  @@index([status])
+}
+
+model TaskApplication {
+  id            String    @id @default(cuid())
+  
+  taskId        String
+  task          MarketplaceTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  
+  applicantId   String
+  applicant     User      @relation(fields: [applicantId], references: [id], onDelete: Cascade)
+  
+  // Proposed GP (may differ from task budget if negotiating)
+  proposedGP    Int
+  
+  // Status: pending, accepted, rejected
+  status        String    @default("pending")
+  
+  createdAt     DateTime  @default(now())
+  
+  @@index([taskId])
+  @@index([applicantId])
+  @@unique([taskId, applicantId])
+}
+
+model Review {
+  id            String    @id @default(cuid())
+  
+  taskId        String
+  
+  reviewerId    String
+  reviewer      User      @relation("ReviewBy", fields: [reviewerId], references: [id], onDelete: Cascade)
+  
+  revieweeId    String
+  reviewee      User      @relation("ReviewFor", fields: [revieweeId], references: [id], onDelete: Cascade)
+  
+  rating        Int       // 1-5 stars
+  comment       String?
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  // Reviews can't be edited after 48 hours
+  
+  @@index([reviewerId])
+  @@index([revieweeId])
+}
+
+// ============================================================================
+// VOUCHERS & CHARITY
+// ============================================================================
+
+model Voucher {
+  id            String    @id @default(cuid())
+  
+  code          String    @unique
+  
+  organizationName String
+  organizationDescription String?
+  organizationLogo String?   // Cloudflare R2 URL
+  
+  // Redemption value in GP
+  gpValue       Int
+  
+  // Redemption details
+  description   String
+  redemptionUrl String?
+  
+  // Status: active, inactive, limited-qty
+  status        String    @default("active")
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  // Relations
+  redemptions   UserVoucher[]
+  
+  @@index([status])
+}
+
+model UserVoucher {
+  id            String    @id @default(cuid())
+  
+  voucherId     String
+  voucher       Voucher   @relation(fields: [voucherId], references: [id], onDelete: Cascade)
+  
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Status: unused, used
+  status        String    @default("unused")
+  
+  redeemedAt    DateTime?
+  
+  createdAt     DateTime  @default(now())
+  
+  @@index([voucherId])
+  @@index([userId])
+}
+
+// ============================================================================
+// SUBSCRIPTIONS & MONETIZATION
+// ============================================================================
+
+model Subscription {
+  id            String    @id @default(cuid())
+  
+  userId        String    @unique
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Type: "pro" or "max"
+  type          String
+  
+  // Stripe subscription ID
+  stripeSubscriptionId String?
+  
+  // Status: active, cancelled, past_due
+  status        String    @default("active")
+  
+  currentPeriodStart DateTime
+  currentPeriodEnd   DateTime
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  @@index([type])
+  @@index([status])
+}
+
+model Boost {
+  id            String    @id @default(cuid())
+  
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  // Either a Post or a MarketplaceTask is boosted
+  postId        String?
+  post          Post?     @relation("BoostedPost", fields: [postId], references: [id], onDelete: Cascade)
+  
+  taskId        String?
+  task          MarketplaceTask? @relation("BoostedTask", fields: [taskId], references: [id], onDelete: Cascade)
+  
+  // Cost: €2 = 200 cents (stored in backend, charged via Stripe)
+  costEur       Float     @default(2.0)
+  
+  // Boost period: 7 days
+  expiresAt     DateTime
+  
+  createdAt     DateTime  @default(now())
+  
+  @@index([userId])
+  @@index([postId])
+  @@index([taskId])
+}
+
+// ============================================================================
+// ACHIEVEMENTS
+// ============================================================================
+
+model Achievement {
+  id            String    @id @default(cuid())
+  
+  slug          String    @unique
+  name          String
+  description   String
+  icon          String?   // Icon name or URL
+  
+  createdAt     DateTime  @default(now())
+  
+  // Relations
+  userAchievements UserAchievement[]
+}
+
+model UserAchievement {
+  id            String    @id @default(cuid())
+  
+  achievementId String
+  achievement   Achievement @relation(fields: [achievementId], references: [id], onDelete: Cascade)
+  
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  unlockedAt    DateTime  @default(now())
+  
+  @@index([userId])
+  @@index([achievementId])
+  @@unique([userId, achievementId])
+}
+
+// ============================================================================
+// COMMENTS
+// ============================================================================
+
+model Comment {
+  id        String   @id @default(cuid())
+  postId    String
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  text      String
+  createdAt DateTime @default(now())
+
+  @@index([postId])
+  @@index([userId])
+}
+
+// ============================================================================
+// MODERATION
+// ============================================================================
+
+model ModeratorFlag {
+  id            String    @id @default(cuid())
+  
+  postId        String
+  post          Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  
+  // Reason: ai-duplicate, community-report, etc.
+  reason        String
+  
+  // Status: pending, approved, rejected, banned
+  status        String    @default("pending")
+  
+  reportCount   Int       @default(1)
+  
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  @@index([postId])
+  @@index([status])
+}

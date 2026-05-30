@@ -1,0 +1,23 @@
+{
+  "name": "greenify",
+  "version": "0.1.0",
+  "description": "Civic eco-platform for documenting tree planting and claiming territorial rewards",
+  "private": true,
+  "workspaces": [
+    "client",
+    "server",
+    "shared"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev --workspace=server\" \"npm run dev --workspace=client\"",
+    "build": "npm run build --workspace=client",
+    "start": "npm run build && npm run dev --workspace=server",
+    "db:migrate": "npm run prisma migrate dev --workspace=server",
+    "db:push": "npm run prisma db push --workspace=server",
+    "db:studio": "npm run prisma studio --workspace=server"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.1",
+    "playwright": "^1.60.0"
+  }
+}
