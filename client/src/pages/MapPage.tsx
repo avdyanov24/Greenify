@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { MapContainer, TileLayer, Polygon, Popup, useMap } from "react-leaflet";
-import { cellToBoundary, latLngToCell, gridDisk } from "h3-js";
+import { cellToBoundary, polygonToCells, cellToChildren } from "h3-js";
 import "leaflet/dist/leaflet.css";
 import { apiClient } from "../services/api";
 import { Link } from "react-router-dom";
@@ -22,15 +22,15 @@ interface HexDetails {
   posts?: { id: string; title: string; user: { displayName: string } }[];
 }
 
+// Resolution 10 → ~65 m edge length (much smaller than the original res-9 ~174 m)
+const DISPLAY_RESOLUTION = 10;
+
 function hexColor(plantCount: number): string {
   if (plantCount === 0) return "#d1fae5";
   if (plantCount <= 10) return "#6ee7b7";
   if (plantCount <= 30) return "#34d399";
   return "#059669";
 }
-
-const BURGAS_CENTER: [number, number] = [42.5069, 27.4626];
-const DEMO_RESOLUTION = 9;
 
 const LEGEND = [
   { color: "#d1fae5", label: "Unclaimed" },
@@ -39,28 +39,118 @@ const LEGEND = [
   { color: "#059669", label: "Dense (31+)" },
 ];
 
-function DemoHexLayer() {
+const BURGAS_CENTER: [number, number] = [42.5069, 27.4626];
+
+// ─── Hex layer: background grid + colored claimed cells ───────────────────────
+function HexLayer({
+  claimedHexes,
+  onHexClick,
+}: {
+  claimedHexes: HexData[];
+  onHexClick: (h3Index: string, data: HexData) => void;
+}) {
   const map = useMap();
-  const center = map.getCenter();
-  const centerH3 = latLngToCell(center.lat, center.lng, DEMO_RESOLUTION);
-  const neighborRing = gridDisk(centerH3, 6);
+  const [viewportCells, setViewportCells] = useState<string[]>([]);
+
+  // Build a map from display-resolution (10) cell → parent HexData
+  // Each claimed hex (stored at res 9) has ~7 res-10 children
+  const claimedChildMap = useMemo<Map<string, HexData>>(() => {
+    const m = new Map<string, HexData>();
+    for (const hex of claimedHexes) {
+      let children: string[];
+      try {
+        children = cellToChildren(hex.h3Index, DISPLAY_RESOLUTION);
+      } catch {
+        children = [];
+      }
+      for (const child of children) m.set(child, hex);
+    }
+    return m;
+  }, [claimedHexes]);
+
+  const claimedSet = useMemo(() => new Set(claimedChildMap.keys()), [claimedChildMap]);
+
+  const updateGrid = useCallback(() => {
+    const b = map.getBounds();
+    const sw = b.getSouthWest();
+    const ne = b.getNorthEast();
+    try {
+      const cells = polygonToCells(
+        [
+          [sw.lat, sw.lng],
+          [sw.lat, ne.lng],
+          [ne.lat, ne.lng],
+          [ne.lat, sw.lng],
+        ],
+        DISPLAY_RESOLUTION,
+      );
+      // Background = all viewport cells minus claimed cells
+      setViewportCells(cells.filter((c) => !claimedSet.has(c)));
+    } catch {
+      setViewportCells([]);
+    }
+  }, [map, claimedSet]);
+
+  useEffect(() => {
+    updateGrid();
+    map.on("moveend", updateGrid);
+    map.on("zoomend", updateGrid);
+    return () => {
+      map.off("moveend", updateGrid);
+      map.off("zoomend", updateGrid);
+    };
+  }, [map, updateGrid]);
+
   return (
     <>
-      {neighborRing.map((h3Index) => {
+      {/* ── Background grid: outlines only, no fill ── */}
+      {viewportCells.map((h3Index) => {
         const boundary = cellToBoundary(h3Index);
-        const positions: [number, number][] = boundary.map(([lat, lng]) => [lat, lng]);
         return (
           <Polygon
             key={h3Index}
-            positions={positions}
-            pathOptions={{ color: "#86efac", fillColor: "#dcfce7", fillOpacity: 0.3, weight: 0.5 }}
+            positions={boundary.map(([lat, lng]) => [lat, lng] as [number, number])}
+            pathOptions={{
+              color: "#16a34a",
+              weight: 0.5,
+              opacity: 0.25,
+              fillOpacity: 0,
+            }}
           />
+        );
+      })}
+
+      {/* ── Claimed hex children: filled with plant-density colour ── */}
+      {Array.from(claimedChildMap.entries()).map(([h3Index, hex]) => {
+        const boundary = cellToBoundary(h3Index);
+        return (
+          <Polygon
+            key={h3Index}
+            positions={boundary.map(([lat, lng]) => [lat, lng] as [number, number])}
+            pathOptions={{
+              color: "#15803d",
+              fillColor: hexColor(hex.plantCount),
+              fillOpacity: 0.75,
+              weight: 1,
+            }}
+            eventHandlers={{ click: () => onHexClick(hex.h3Index, hex) }}
+          >
+            <Popup>
+              <div className="text-sm">
+                <p className="font-bold">{hex.organizationName || hex.userName || "Unclaimed"}</p>
+                <p>
+                  {hex.plantCount} plant{hex.plantCount !== 1 ? "s" : ""}
+                </p>
+              </div>
+            </Popup>
+          </Polygon>
         );
       })}
     </>
   );
 }
 
+// ─── Page ────────────────────────────────────────────────────────────────────
 export default function MapPage() {
   const [hexes, setHexes] = useState<HexData[]>([]);
   const [selectedHex, setSelectedHex] = useState<HexDetails | null>(null);
@@ -69,39 +159,30 @@ export default function MapPage() {
   useEffect(() => {
     apiClient
       .getMapData()
-      .then((data) => { if (data.hexes) setHexes(data.hexes); })
+      .then((data) => {
+        if (data.hexes) setHexes(data.hexes);
+      })
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);
 
-  const handleHexClick = async (h3Index: string) => {
+  const handleHexClick = useCallback(async (h3Index: string) => {
     try {
       const details = await apiClient.getHexDetails(h3Index);
       setSelectedHex(details);
     } catch {
       setSelectedHex({ h3Index, plantCount: 0, userId: null, posts: [] });
     }
-  };
+  }, []);
 
   const hexCount = loading ? "Loading…" : `${hexes.length} hexes claimed`;
 
   return (
-    /**
-     * Outer wrapper: always flex.
-     *  - Desktop (md+): row — info panel on left, map fills remaining space
-     *  - Mobile       : column — map on top, info panel below
-     *
-     * Using document-flow panels (not absolute overlays) eliminates all
-     * z-index / stacking-context conflicts with Leaflet.
-     */
     <div className="h-full flex flex-col md:flex-row overflow-hidden">
 
-      {/* ────────────────────────────────────────────────────────
-          DESKTOP INFO PANEL  (left column, md+ only)
-      ──────────────────────────────────────────────────────── */}
+      {/* ── DESKTOP: left info panel ── */}
       <aside className="hidden md:flex flex-col w-72 shrink-0 bg-white border-r border-gray-100 overflow-y-auto">
         <div className="p-5">
-          {/* Header */}
           <div className="flex items-center gap-2 mb-4">
             <div className="w-8 h-8 rounded-lg bg-green-700 flex items-center justify-center shrink-0">
               <TreePine size={15} className="text-white" />
@@ -109,12 +190,10 @@ export default function MapPage() {
             <h2 className="font-bold text-gray-900">Burgas Green Map</h2>
           </div>
 
-          {/* Hex count */}
           <p className={`text-sm mb-1 ${loading ? "text-gray-400" : "text-green-700 font-medium"}`}>
             {hexCount}
           </p>
 
-          {/* Selected hex info */}
           {selectedHex && (
             <div className="mt-4 pt-4 border-t border-gray-100">
               <p className="font-semibold text-sm text-gray-800">
@@ -132,7 +211,6 @@ export default function MapPage() {
             </div>
           )}
 
-          {/* Plant CTA */}
           <Link
             to="/create-post"
             className="flex items-center justify-center gap-2 w-full mt-5 bg-green-700 text-white text-sm font-semibold py-2.5 rounded-xl hover:bg-green-800 transition shadow-sm"
@@ -140,7 +218,6 @@ export default function MapPage() {
             <TreePine size={14} /> Plant Here
           </Link>
 
-          {/* Legend */}
           <div className="mt-6 pt-5 border-t border-gray-100">
             <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
               Plant Density
@@ -160,9 +237,7 @@ export default function MapPage() {
         </div>
       </aside>
 
-      {/* ────────────────────────────────────────────────────────
-          MAP  (fills remaining space at all breakpoints)
-      ──────────────────────────────────────────────────────── */}
+      {/* ── MAP ── */}
       <div className="flex-1 min-h-0 min-w-0">
         <MapContainer
           center={BURGAS_CENTER}
@@ -174,38 +249,11 @@ export default function MapPage() {
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
-          {hexes.length === 0 && <DemoHexLayer />}
-          {hexes.map((hex) => {
-            const boundary = cellToBoundary(hex.h3Index);
-            const positions: [number, number][] = boundary.map(([lat, lng]) => [lat, lng]);
-            return (
-              <Polygon
-                key={hex.h3Index}
-                positions={positions}
-                pathOptions={{
-                  color: "#15803d",
-                  fillColor: hexColor(hex.plantCount),
-                  fillOpacity: 0.7,
-                  weight: 1,
-                }}
-                eventHandlers={{ click: () => handleHexClick(hex.h3Index) }}
-              >
-                <Popup>
-                  <div className="text-sm">
-                    <p className="font-bold">{hex.organizationName || hex.userName || "Unclaimed"}</p>
-                    <p>{hex.plantCount} plant{hex.plantCount !== 1 ? "s" : ""}</p>
-                  </div>
-                </Popup>
-              </Polygon>
-            );
-          })}
+          <HexLayer claimedHexes={hexes} onHexClick={handleHexClick} />
         </MapContainer>
       </div>
 
-      {/* ────────────────────────────────────────────────────────
-          MOBILE INFO PANEL  (bottom strip, mobile only)
-          In document flow — never overlaps the map.
-      ──────────────────────────────────────────────────────── */}
+      {/* ── MOBILE: bottom info strip ── */}
       <div className="md:hidden shrink-0 bg-white border-t border-gray-100 shadow-[0_-2px_8px_rgba(0,0,0,0.07)]">
         <div className="px-4 py-3 flex items-center gap-3">
           <div className="flex-1 min-w-0">
@@ -218,7 +266,6 @@ export default function MapPage() {
                 {hexCount}
               </p>
             )}
-            {/* Mini legend */}
             <div className="flex flex-wrap gap-x-3 gap-y-0.5 mt-1">
               {LEGEND.map((item) => (
                 <div key={item.label} className="flex items-center gap-1">
@@ -231,7 +278,6 @@ export default function MapPage() {
               ))}
             </div>
           </div>
-
           <Link
             to="/create-post"
             className="shrink-0 flex items-center gap-1.5 bg-green-700 text-white text-sm font-semibold px-4 py-2.5 rounded-xl hover:bg-green-800 transition"
