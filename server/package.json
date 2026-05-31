@@ -1,7 +1,6 @@
 {
   "name": "greenify-server",
   "version": "0.1.0",
-  "type": "module",
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "prisma generate && tsc",
