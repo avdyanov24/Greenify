@@ -79,7 +79,7 @@ export default function MapPage() {
   };
 
   return (
-    <div className="h-screen w-full relative">
+    <div className="h-full w-full relative overflow-hidden">
       <MapContainer
         center={BURGAS_CENTER}
         zoom={14}

@@ -60,9 +60,8 @@ function App() {
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
-        <Route path="/map" element={<MapPage />} />
-
         <Route element={<ProtectedLayout />}>
+          <Route path="/map" element={<MapPage />} />
           <Route path="/feed" element={<FeedPage />} />
           <Route path="/create-post" element={<CreatePostPage />} />
           <Route path="/posts/:postId" element={<PostDetailPage />} />
