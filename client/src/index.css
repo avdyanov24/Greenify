@@ -2,10 +2,15 @@
 @tailwind components;
 @tailwind utilities;
 
-* {
+/* ── Reset ─────────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
   margin: 0;
   padding: 0;
-  box-sizing: border-box;
+}
+
+html, body, #root {
+  height: 100%;
 }
 
 body {
@@ -16,41 +21,71 @@ body {
   -moz-osx-font-smoothing: grayscale;
   color: #1f2937;
   background-color: #f8faf9;
+  /* Prevent horizontal scroll on mobile */
+  overflow-x: hidden;
 }
 
-h1,
-h2,
-h3,
-.font-display {
+h1, h2, h3, .font-display {
   font-family: "Plus Jakarta Sans", "Inter", ui-sans-serif, sans-serif;
   letter-spacing: -0.01em;
 }
 
-/* Visible, consistent focus ring for keyboard users (accessibility) */
+/* ── Focus ring ─────────────────────────────────────────── */
 :focus-visible {
   outline: 2px solid #15803d;
   outline-offset: 2px;
 }
 
-html,
-body,
-#root {
-  height: 100%;
+/* ── Scrollbar (Webkit) ─────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #9ca3af;
 }
 
-/* Leaflet overrides */
+/* ── Leaflet overrides ──────────────────────────────────── */
+/* Keep Leaflet's internal panes from leaking above the header/sidebar.
+   The map container creates its own stacking context at z-index 0.
+   All Leaflet panes are children of this context, so they can never
+   escape above fixed elements with higher z-indices. */
 .leaflet-container {
   font-family: inherit;
+  /* Isolate map into its own stacking context */
+  isolation: isolate;
 }
 
-/* Toast slide-in */
+/* Prevent Leaflet controls from covering the sidebar on mobile */
+.leaflet-control-container .leaflet-top,
+.leaflet-control-container .leaflet-bottom {
+  z-index: 400;
+}
+
+/* ── Animations ─────────────────────────────────────────── */
 @keyframes slidein {
-  from {
-    opacity: 0;
-    transform: translateX(1rem);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
+  from { opacity: 0; transform: translateX(1rem); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes fadeup {
+  from { opacity: 0; transform: translateY(0.5rem); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Mobile tap highlight ───────────────────────────────── */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ── Safe area padding (notch devices) ─────────────────── */
+.safe-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0);
 }

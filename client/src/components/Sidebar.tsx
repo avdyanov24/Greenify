@@ -1,19 +1,7 @@
 import { Link, useLocation } from "react-router-dom";
-import { useState, useEffect, useRef } from "react";
 import {
-  MapPin,
-  BookOpen,
-  Plus,
-  User,
-  Users,
-  Briefcase,
-  Gift,
-  CreditCard,
-  Shield,
-  Trophy,
-  Award,
-  ChevronLeft,
-  ChevronRight,
+  MapPin, BookOpen, Plus, User, Users, Briefcase,
+  Gift, CreditCard, Shield, Trophy, Award, Leaf, X,
 } from "lucide-react";
 import { useAuthStore } from "../utils/store";
 
@@ -22,8 +10,6 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ onClose }: SidebarProps) {
-  const [isCollapsed, setIsCollapsed] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
   const location = useLocation();
   const user = useAuthStore((s) => s.user);
 
@@ -31,102 +17,109 @@ export default function Sidebar({ onClose }: SidebarProps) {
   const isStaff = user?.role === "moderator" || user?.role === "admin";
   const plan = user?.subscription?.status === "active" ? user.subscription.type : null;
 
-  // Handle mobile responsiveness
-  useEffect(() => {
-    const handleResize = () => {
-      const mobile = window.innerWidth < 768;
-      setIsMobile(mobile);
-      if (mobile) {
-        setIsCollapsed(false);
-      }
-    };
-    
-    handleResize();
-    window.addEventListener("resize", handleResize);
-    return () => window.removeEventListener("resize", handleResize);
-  }, []);
-
-  const hasMounted = useRef(false);
-
-  // Close sidebar on mobile only after the initial mount when the route changes
-  useEffect(() => {
-    if (!hasMounted.current) {
-      hasMounted.current = true;
-      return;
-    }
-
-    if (isMobile && onClose) {
-      onClose();
-    }
-  }, [location.pathname, isMobile, onClose]);
-
   return (
-    <aside className={`bg-white border-r border-gray-200 p-5 flex flex-col transition-all duration-300 ${isCollapsed ? "w-20" : "w-full max-w-xs sm:w-72 md:w-64"}`}>
-      <div className="flex items-center justify-between mb-4">
-        {!isCollapsed && <h1 className="text-lg font-bold text-green-700">Greenify</h1>}
+    <aside className="w-64 h-full bg-white border-r border-gray-100 flex flex-col overflow-y-auto">
+      {/* Brand */}
+      <div className="flex items-center justify-between px-4 py-4 border-b border-gray-100 shrink-0">
+        <Link to="/feed" onClick={onClose} className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-lg bg-green-700 flex items-center justify-center shadow-sm">
+            <Leaf size={16} className="text-white" />
+          </div>
+          <span className="text-base font-bold text-gray-900">Greenify</span>
+        </Link>
+        {/* Close button — mobile only */}
         <button
-          onClick={() => setIsCollapsed(!isCollapsed)}
-          className="p-1 hover:bg-gray-100 rounded-lg transition hidden md:inline-flex"
-          title={isCollapsed ? "Expand" : "Collapse"}
+          onClick={onClose}
+          className="md:hidden p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-700 transition"
+          aria-label="Close menu"
         >
-          {isCollapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
+          <X size={18} />
         </button>
       </div>
-      <nav className="space-y-1.5 flex-1">
-        <SidebarLink to="/map" icon={<MapPin size={20} />} label="Map" active={isActive("/map")} collapsed={isCollapsed} />
-        <SidebarLink to="/feed" icon={<BookOpen size={20} />} label="Feed" active={isActive("/feed")} collapsed={isCollapsed} />
-        <SidebarLink to="/create-post" icon={<Plus size={20} />} label="Plant" active={isActive("/create-post")} collapsed={isCollapsed} />
-        <SidebarLink
-          to={user ? `/profile/${user.id}` : "/login"}
-          icon={<User size={20} />}
-          label="Profile"
-          active={location.pathname.startsWith("/profile") && !location.pathname.includes("edit")}
-          collapsed={isCollapsed}
-        />
-        <SidebarLink to="/organizations" icon={<Users size={20} />} label="Organizations" active={isActive("/organizations")} collapsed={isCollapsed} />
-        <SidebarLink to="/marketplace" icon={<Briefcase size={20} />} label="Marketplace" active={isActive("/marketplace")} collapsed={isCollapsed} />
-        <SidebarLink to="/leaderboard" icon={<Trophy size={20} />} label="Leaderboard" active={isActive("/leaderboard")} collapsed={isCollapsed} />
-        <SidebarLink to="/achievements" icon={<Award size={20} />} label="Achievements" active={isActive("/achievements")} collapsed={isCollapsed} />
-        <SidebarLink to="/vouchers" icon={<Gift size={20} />} label="Vouchers" active={isActive("/vouchers")} collapsed={isCollapsed} />
-        <SidebarLink to="/subscriptions" icon={<CreditCard size={20} />} label="Subscriptions" active={isActive("/subscriptions")} collapsed={isCollapsed} />
-        {isStaff && (
-          <SidebarLink to="/admin/moderation" icon={<Shield size={20} />} label="Moderation" active={isActive("/admin")} collapsed={isCollapsed} />
-        )}
+
+      {/* Nav */}
+      <nav className="flex-1 py-3 px-3 space-y-0.5">
+        <Section label="Explore">
+          <NavLink to="/map" icon={<MapPin size={17} />} label="Map" active={isActive("/map")} onClose={onClose} />
+          <NavLink to="/feed" icon={<BookOpen size={17} />} label="Feed" active={isActive("/feed")} onClose={onClose} />
+          <NavLink to="/create-post" icon={<Plus size={17} />} label="Plant" active={isActive("/create-post")} onClose={onClose} accent />
+        </Section>
+
+        <Section label="Community">
+          <NavLink
+            to={user ? `/profile/${user.id}` : "/login"}
+            icon={<User size={17} />}
+            label="Profile"
+            active={location.pathname.startsWith("/profile") && !location.pathname.includes("edit")}
+            onClose={onClose}
+          />
+          <NavLink to="/organizations" icon={<Users size={17} />} label="Organizations" active={isActive("/organizations")} onClose={onClose} />
+          <NavLink to="/marketplace" icon={<Briefcase size={17} />} label="Marketplace" active={isActive("/marketplace")} onClose={onClose} />
+          <NavLink to="/leaderboard" icon={<Trophy size={17} />} label="Leaderboard" active={isActive("/leaderboard")} onClose={onClose} />
+          <NavLink to="/achievements" icon={<Award size={17} />} label="Achievements" active={isActive("/achievements")} onClose={onClose} />
+        </Section>
+
+        <Section label="Account">
+          <NavLink to="/vouchers" icon={<Gift size={17} />} label="Vouchers" active={isActive("/vouchers")} onClose={onClose} />
+          <NavLink to="/subscriptions" icon={<CreditCard size={17} />} label="Subscriptions" active={isActive("/subscriptions")} onClose={onClose} />
+          {isStaff && (
+            <NavLink to="/admin/moderation" icon={<Shield size={17} />} label="Moderation" active={isActive("/admin")} onClose={onClose} />
+          )}
+        </Section>
       </nav>
 
+      {/* Plan badge */}
       {plan && (
-        <div className={`mt-4 rounded-lg bg-gradient-to-r from-green-700 to-emerald-600 text-white px-3 py-2 text-sm font-semibold text-center ${isCollapsed ? "text-xs" : ""}`}
-          title={isCollapsed ? plan.toUpperCase() : undefined}
-        >
-          {isCollapsed ? plan.charAt(0).toUpperCase() : plan.toUpperCase()}
-          {!isCollapsed && " member"}
+        <div className="mx-3 mb-4 shrink-0 rounded-xl bg-gradient-to-br from-green-700 to-emerald-500 text-white px-4 py-3">
+          <p className="text-[10px] font-medium opacity-70 uppercase tracking-wider">Current Plan</p>
+          <p className="text-sm font-bold">{plan.toUpperCase()} Member</p>
         </div>
       )}
     </aside>
   );
 }
 
-interface SidebarLinkProps {
+function Section({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="mb-1">
+      <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest px-3 pt-4 pb-1.5">
+        {label}
+      </p>
+      {children}
+    </div>
+  );
+}
+
+interface NavLinkProps {
   to: string;
   icon: React.ReactNode;
   label: string;
   active: boolean;
-  collapsed: boolean;
+  onClose?: () => void;
+  accent?: boolean;
 }
 
-function SidebarLink({ to, icon, label, active, collapsed }: SidebarLinkProps) {
+function NavLink({ to, icon, label, active, onClose, accent }: NavLinkProps) {
+  const base = "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-150";
+
+  if (accent && !active) {
+    return (
+      <Link to={to} onClick={onClose}
+        className={`${base} bg-green-700 text-white font-semibold hover:bg-green-800 shadow-sm`}>
+        {icon} {label}
+      </Link>
+    );
+  }
+
   return (
-    <Link
-      to={to}
-      className={`flex items-center gap-3 px-4 py-2 rounded-lg transition ${collapsed ? "w-10 h-10 justify-center" : ""} ${
-        active ? "bg-green-50 text-green-800 font-semibold" : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
-      }`}
-      title={collapsed ? label : undefined}
-    >
-      <span className={collapsed ? "scale-125" : ""}>
-        {icon}
-      </span>
-      {!collapsed && <span>{label}</span>}
+    <Link to={to} onClick={onClose}
+      className={`${base} ${active
+        ? "bg-green-50 text-green-800 font-semibold"
+        : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+      }`}>
+      <span className={active ? "text-green-700" : "text-gray-400"}>{icon}</span>
+      <span className="flex-1">{label}</span>
+      {active && <span className="w-1.5 h-1.5 rounded-full bg-green-600 shrink-0" />}
     </Link>
   );
 }
