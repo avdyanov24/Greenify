@@ -120,14 +120,14 @@ export default function SubscriptionsPage() {
   }
 
   return (
-    <div className="max-w-5xl mx-auto py-8 px-4">
-      <h1 className="text-3xl font-bold text-center mb-2">Greenify Subscriptions</h1>
-      <p className="text-center text-gray-500 mb-3">Support the platform and accelerate your impact.</p>
-      <p className="text-center text-xs text-gray-400 mb-10">
+    <div className="w-full max-w-6xl mx-auto py-4 md:py-8 px-2 md:px-4">
+      <h1 className="text-2xl md:text-3xl font-bold text-center mb-2">Greenify Subscriptions</h1>
+      <p className="text-center text-gray-500 mb-3 text-sm md:text-base">Support the platform and accelerate your impact.</p>
+      <p className="text-center text-xs text-gray-400 mb-8 md:mb-10">
         Demo mode — checkout is mocked, no payment is taken.
       </p>
 
-      <div className="grid md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
         {PLANS.map((plan) => {
           const isCurrent = current === plan.tier;
           const Icon = plan.icon;

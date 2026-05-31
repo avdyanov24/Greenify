@@ -86,7 +86,7 @@ export default function CreatePostPage() {
 
   if (result) {
     return (
-      <div className="max-w-lg mx-auto py-16 px-4 text-center">
+      <div className="w-full max-w-lg mx-auto py-8 md:py-16 px-2 md:px-4 text-center">
         <div className="bg-white rounded-2xl shadow-lg p-10">
           {result.isDuplicate ? (
             <AlertCircle size={56} className="text-yellow-500 mx-auto mb-4" />
@@ -131,8 +131,8 @@ export default function CreatePostPage() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto py-8 px-4">
-      <h1 className="text-3xl font-bold mb-6">Plant Something New</h1>
+    <div className="w-full max-w-2xl mx-auto py-4 md:py-8 px-2 md:px-4">
+      <h1 className="text-2xl md:text-3xl font-bold mb-6">Plant Something New</h1>
 
       {/* Progress bar */}
       <div className="flex gap-1 mb-8">
@@ -144,7 +144,7 @@ export default function CreatePostPage() {
         ))}
       </div>
 
-      <div className="bg-white rounded-xl shadow-md p-8">
+      <div className="bg-white rounded-xl shadow-md p-4 md:p-8">
         <h2 className="text-xl font-bold mb-1">{STEPS[step].label}</h2>
         <p className="text-gray-500 text-sm mb-6">{STEPS[step].desc}</p>
 

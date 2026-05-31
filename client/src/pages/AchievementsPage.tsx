@@ -40,18 +40,18 @@ export default function AchievementsPage() {
   const unlockedCount = all.filter((a) => unlocked.has(a.slug)).length;
 
   return (
-    <div className="max-w-4xl mx-auto py-8 px-4">
-      <div className="flex items-center justify-between mb-6 flex-wrap gap-2">
+    <div className="w-full max-w-6xl mx-auto py-4 md:py-8 px-2 md:px-4">
+      <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
         <div className="flex items-center gap-2">
-          <Award className="text-green-700" size={28} />
-          <h1 className="text-3xl font-bold">Achievements</h1>
+          <Award className="text-green-700 md:text-[28px]" size={24} />
+          <h1 className="text-2xl md:text-3xl font-bold">Achievements</h1>
         </div>
         <Badge color="green">
           {unlockedCount} / {all.length} unlocked
         </Badge>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-4">
         {all.map((a) => {
           const has = unlocked.has(a.slug);
           return (

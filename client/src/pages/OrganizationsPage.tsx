@@ -66,9 +66,9 @@ export default function OrganizationsPage() {
   };
 
   return (
-    <div className="max-w-5xl mx-auto py-8 px-4">
-      <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
-        <h1 className="text-3xl font-bold">Organizations</h1>
+    <div className="w-full max-w-6xl mx-auto py-4 md:py-8 px-2 md:px-4">
+      <div className="flex items-center justify-between mb-2 flex-wrap gap-3">
+        <h1 className="text-2xl md:text-3xl font-bold">Organizations</h1>
         <Button
           leftIcon={<Building2 size={16} />}
           disabled={!canCreate}

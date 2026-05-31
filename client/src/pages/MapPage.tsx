@@ -122,7 +122,7 @@ export default function MapPage() {
       </MapContainer>
 
       {/* Sidebar */}
-      <div className="absolute top-4 right-4 bg-white rounded-xl shadow-lg p-4 w-72 z-[1000]">
+      <div className="absolute top-4 right-4 left-4 sm:right-4 sm:left-auto bg-white rounded-xl shadow-lg p-4 w-auto max-w-[calc(100vw-2rem)] sm:w-72 z-[1000]">
         <h3 className="font-bold text-lg mb-3 text-green-700">Burgas Green Map</h3>
 
         {loading ? (
@@ -157,7 +157,7 @@ export default function MapPage() {
       </div>
 
       {/* Legend */}
-      <div className="absolute bottom-4 left-4 bg-white rounded-xl shadow-lg p-4 z-[1000]">
+      <div className="absolute bottom-4 left-4 right-4 sm:left-4 sm:right-auto bg-white rounded-xl shadow-lg p-4 w-auto max-w-[calc(100vw-2rem)] sm:max-w-xs z-[1000]">
         <h4 className="font-bold text-sm mb-2">Plant Density</h4>
         <div className="space-y-1.5 text-xs">
           {[

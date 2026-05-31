@@ -64,9 +64,9 @@ export default function VouchersPage() {
   const balance = user?.greenPoints ?? 0;
 
   return (
-    <div className="max-w-5xl mx-auto py-8 px-4">
-      <div className="flex items-end justify-between mb-2 flex-wrap gap-2">
-        <h1 className="text-3xl font-bold">Voucher Store</h1>
+    <div className="w-full max-w-6xl mx-auto py-4 md:py-8 px-2 md:px-4">
+      <div className="flex items-end justify-between mb-2 flex-wrap gap-3">
+        <h1 className="text-2xl md:text-3xl font-bold">Voucher Store</h1>
         <Badge color="yellow">
           <Coins size={13} /> {balance} GP available
         </Badge>
@@ -82,7 +82,7 @@ export default function VouchersPage() {
           {vouchers.length === 0 ? (
             <EmptyState icon={<Gift size={48} />} title="No vouchers available yet" />
           ) : (
-            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
               {vouchers.map((v) => {
                 const affordable = balance >= v.gpValue;
                 return (

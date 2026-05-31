@@ -127,20 +127,20 @@ export default function OrganizationDetailPage() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto py-8 px-4">
+    <div className="w-full max-w-5xl mx-auto py-4 md:py-8 px-2 md:px-4">
       <button onClick={() => navigate("/organizations")} className="text-sm text-gray-500 hover:text-gray-700 mb-4">
         ← All organizations
       </button>
 
       <Card padding="lg" className="mb-6">
-        <div className="flex gap-5 items-start">
+        <div className="flex gap-4 md:gap-5 items-start flex-col sm:flex-row">
           <div className="w-20 h-20 rounded-xl bg-green-100 flex items-center justify-center text-green-700 shrink-0">
             <Building2 size={36} />
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-start justify-between gap-3 flex-wrap">
               <div>
-                <h1 className="text-2xl font-bold">{org.name}</h1>
+                <h1 className="text-xl md:text-2xl font-bold">{org.name}</h1>
                 <p className="text-sm text-gray-500">
                   Led by{" "}
                   <Link to={`/profile/${org.leader.id}`} className="hover:text-green-600">

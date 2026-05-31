@@ -41,22 +41,22 @@ export default function LeaderboardPage() {
   const medal = (i: number) => (i === 0 ? "text-yellow-400" : i === 1 ? "text-gray-400" : i === 2 ? "text-amber-600" : "text-gray-300");
 
   return (
-    <div className="max-w-3xl mx-auto py-8 px-4">
-      <div className="flex items-center gap-2 mb-6">
-        <Trophy className="text-yellow-500" size={28} />
-        <h1 className="text-3xl font-bold">Leaderboard</h1>
+    <div className="w-full max-w-4xl mx-auto py-4 md:py-8 px-2 md:px-4">
+      <div className="flex items-center gap-2 mb-6 flex-wrap">
+        <Trophy className="text-yellow-500" size={24} />
+        <h1 className="text-2xl md:text-3xl font-bold">Leaderboard</h1>
       </div>
 
-      <div className="flex gap-1 mb-6 border-b border-gray-200">
+      <div className="flex gap-1 mb-6 border-b border-gray-200 overflow-x-auto">
         {TABS.map((t) => (
           <button
             key={t.key}
             onClick={() => setSort(t.key)}
-            className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition flex items-center gap-1.5 ${
+            className={`px-3 md:px-4 py-2 text-xs md:text-sm font-medium border-b-2 -mb-px transition flex items-center gap-1 md:gap-1.5 whitespace-nowrap ${
               sort === t.key ? "border-green-600 text-green-700" : "border-transparent text-gray-500 hover:text-gray-700"
             }`}
           >
-            <t.icon size={15} /> {t.label}
+            <t.icon size={14} /> <span className="hidden sm:inline">{t.label}</span>
           </button>
         ))}
       </div>

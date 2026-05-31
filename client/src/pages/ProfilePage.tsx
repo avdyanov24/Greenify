@@ -64,9 +64,9 @@ export default function ProfilePage() {
   const isOwn = currentUser?.id === profile.id;
 
   return (
-    <div className="max-w-4xl mx-auto py-8 px-4">
-      <div className="bg-white rounded-xl shadow-md p-8 mb-8">
-        <div className="flex gap-6 items-start">
+    <div className="w-full max-w-5xl mx-auto py-4 md:py-8 px-2 md:px-4">
+      <div className="bg-white rounded-xl shadow-md p-4 md:p-8 mb-8">
+        <div className="flex gap-4 md:gap-6 items-start flex-col sm:flex-row">
           <div className="w-24 h-24 rounded-full bg-green-100 flex items-center justify-center text-green-700 font-bold text-3xl shrink-0">
             {(profile.displayName || profile.username)[0].toUpperCase()}
           </div>
@@ -75,7 +75,7 @@ export default function ProfilePage() {
             <p className="text-gray-500 text-sm">@{profile.username}</p>
             {profile.bio && <p className="text-gray-600 mt-2">{profile.bio}</p>}
 
-            <div className="grid grid-cols-4 gap-4 my-4">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 md:gap-4 my-4">
               {[
                 { label: "Level", value: profile.level, color: "text-green-700" },
                 { label: "Green Points", value: profile.greenPoints, color: "text-amber-600" },

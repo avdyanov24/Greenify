@@ -94,9 +94,9 @@ export default function FeedPage() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto py-8 px-4">
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-3xl font-bold">Planting Feed</h1>
+    <div className="w-full max-w-4xl mx-auto py-4 md:py-8 px-2 md:px-4">
+      <div className="flex items-center justify-between mb-6 flex-col gap-4 sm:flex-row">
+        <h1 className="text-2xl md:text-3xl font-bold">Planting Feed</h1>
         <Link to="/create-post">
           <Button size="sm" leftIcon={<Leaf size={15} />}>
             Plant
@@ -247,7 +247,7 @@ function PostCard({
         <h3 className="font-bold text-lg mb-1">{post.title}</h3>
         {post.description && <p className="text-gray-600 text-sm mb-3">{post.description}</p>}
         {post.images.length > 0 && (
-          <div className="grid grid-cols-3 gap-1.5">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
             {post.images.slice(0, 3).map((img) => (
               <img key={img.order} src={img.imageUrl} alt={`Photo ${img.order}`} className="w-full h-28 object-cover rounded-lg" />
             ))}

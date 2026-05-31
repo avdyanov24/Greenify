@@ -109,30 +109,30 @@ export default function PostDetailPage() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto py-8 px-4">
+    <div className="w-full max-w-4xl mx-auto py-4 md:py-8 px-2 md:px-4">
       <button onClick={() => navigate(-1)} className="text-sm text-gray-500 hover:text-gray-700 mb-4">
         ← Back
       </button>
 
       <Card padding="lg" className="mb-6">
-        <div className="flex items-center gap-3 mb-4">
+        <div className="flex items-center gap-3 mb-4 flex-wrap">
           <Avatar name={post.user.displayName} src={post.user.profileImage} />
-          <div className="flex-1">
+          <div className="flex-1 min-w-0">
             <Link to={`/profile/${post.user.id}`} className="font-semibold hover:text-green-600">
               {post.user.displayName || post.user.username}
             </Link>
             <p className="text-xs text-gray-500">{new Date(post.createdAt).toLocaleString()}</p>
           </div>
-          <Badge color="gray">
+          <Badge color="gray" className="shrink-0">
             {plantIcon(post.plantType)}
             <span className="capitalize">{post.plantType}</span>
           </Badge>
         </div>
 
-        <h1 className="text-2xl font-bold mb-1">{post.title}</h1>
+        <h1 className="text-xl md:text-2xl font-bold mb-1">{post.title}</h1>
         {post.description && <p className="text-gray-600 mb-4">{post.description}</p>}
 
-        <div className="grid grid-cols-3 gap-2 mb-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-4">
           {post.images.map((img, i) => (
             <figure key={img.order}>
               <img src={img.imageUrl} alt={PHOTO_LABELS[i]} className="w-full h-32 object-cover rounded-lg" />
