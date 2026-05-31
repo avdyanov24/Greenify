@@ -8,6 +8,9 @@
     "server",
     "shared"
   ],
+  "prisma": {
+    "schema": "server/prisma/schema.prisma"
+  },
   "scripts": {
     "dev": "concurrently \"npm run dev --workspace=server\" \"npm run dev --workspace=client\"",
     "build": "npm run build --workspace=client",
