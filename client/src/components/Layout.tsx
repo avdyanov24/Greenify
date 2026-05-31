@@ -8,10 +8,9 @@ export default function Layout({ children }: { children?: React.ReactNode }) {
   const closeSidebar = useCallback(() => setSidebarOpen(false), []);
 
   return (
-    // Always flex-row. Sidebar is fixed (off-canvas) on mobile, static on desktop.
     <div className="flex h-screen overflow-hidden bg-[#f8faf9]">
 
-      {/* Mobile backdrop — sits between content and sidebar */}
+      {/* ── Mobile backdrop ─────────────────────────────────── */}
       {sidebarOpen && (
         <div
           className="fixed inset-0 z-40 bg-black/50 md:hidden"
@@ -19,23 +18,28 @@ export default function Layout({ children }: { children?: React.ReactNode }) {
         />
       )}
 
-      {/* Sidebar wrapper
-          Mobile : fixed, slides in from left, z-50 (above Leaflet's highest pane at ~800)
-          Desktop: static, always visible, no z-index needed */}
+      {/* ── Sidebar wrapper ───────────────────────────────────
+          Mobile : fixed off-canvas, z-50 (above Leaflet's highest ~800 internal z-index)
+          Desktop: static in-flow, NO transform (transform creates stacking context
+                   which causes the sidebar to paint behind the map) */}
       <div
         className={[
-          "fixed inset-y-0 left-0 z-50",       // mobile: off-canvas overlay
-          "md:static md:z-auto",                 // desktop: in-flow, no z shenanigans
+          // mobile positioning
+          "fixed inset-y-0 left-0 z-50",
+          // desktop: back into normal flow, remove z and transform entirely
+          "md:static md:z-auto md:transform-none",
+          // slide animation only on mobile
           "transition-transform duration-300 ease-in-out",
-          sidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0",
+          // open/closed state — md:transform-none overrides the translate on desktop
+          sidebarOpen ? "translate-x-0" : "-translate-x-full",
         ].join(" ")}
       >
         <Sidebar onClose={closeSidebar} />
       </div>
 
-      {/* Right-side column: header + scrollable content */}
+      {/* ── Main column ─────────────────────────────────────── */}
       <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
-        {/* Header must sit above the map — give it a stacking context */}
+        {/* Header gets its own stacking context so it always sits above the map */}
         <div className="relative z-10 shrink-0">
           <Header
             onMenuClick={() => setSidebarOpen((v) => !v)}
@@ -43,8 +47,8 @@ export default function Layout({ children }: { children?: React.ReactNode }) {
           />
         </div>
 
-        {/* min-h-0 is critical: without it flex-1 children can't constrain their
-            height, so h-full on MapPage would not work correctly */}
+        {/* min-h-0 is required: without it flex children can't constrain to the
+            available height, so h-full inside MapPage won't fill correctly */}
         <main className="flex-1 min-h-0 overflow-auto bg-[#f8faf9]">
           {children ?? <Outlet />}
         </main>
